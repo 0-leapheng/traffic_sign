@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teachable Machine Image Model</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
+        }
+        #image-container img {
+            max-width: 300px;
+            height: auto;
+            margin-top: 20px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+        }
+        #label-container {
+            margin-top: 20px;
+            font-size: 1.2em;
+            width: 90%; /* Increased width */
+            max-width: 800px; /* Maximum width */
+            margin-left: auto;
+            margin-right: auto;
+            text-align: left; /* Left-align for better readability */
+            overflow: visible; /* Ensure no clipping */
+        }
+        /* Table Styles */
+        table {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+            word-wrap: break-word; /* Allow text to wrap within cells */
+            white-space: normal; /* Enable text wrapping */
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        /* Responsive Design */
+        @media (max-width: 600px) {
+            #label-container {
+                width: 95%;
+            }
+            table, th, td {
+                font-size: 0.9em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Teachable Machine Image Model</h1>
+    
+    <!-- Image Upload Input -->
+    <input type="file" accept="image/*" onchange="handleImageUpload(event)" />
+    
+    <!-- Container to Display Uploaded Image -->
+    <div id="image-container"></div>
+    
+    <!-- Container to Display Predictions -->
+    <div id="label-container">
+        <!-- Predictions will be inserted here as a table -->
+    </div>
+
+    <!-- TensorFlow.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    
+    <!-- Teachable Machine Image Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    
+    <script type="text/javascript">
+        // URL of the Teachable Machine model
+        const MODEL_URL = "https://teachablemachine.withgoogle.com/models/BRbW8sH4W/";
+
+        let model, maxPredictions;
+
+        // Initialize the model when the page loads
+        async function init() {
+            const modelURL = MODEL_URL + "model.json";
+            const metadataURL = MODEL_URL + "metadata.json";
+
+            // Load the model and metadata
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
+
+            // Prepare the label container
+            const labelContainer = document.getElementById("label-container");
+            labelContainer.innerHTML = "<p>Model loaded. Please upload an image.</p>";
+        }
+
+        // Handle Image Upload
+        async function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Clear previous image and labels
+            const imageContainer = document.getElementById("image-container");
+            const labelContainer = document.getElementById("label-container");
+            imageContainer.innerHTML = "";
+            labelContainer.innerHTML = "Processing image...";
+
+            // Create an image element to display the uploaded image
+            const img = document.createElement("img");
+            img.src = URL.createObjectURL(file);
+            img.alt = "Uploaded Image";
+
+            // Once the image is loaded, perform prediction
+            img.onload = async () => {
+                // Display the image
+                imageContainer.appendChild(img);
+
+                // Perform prediction
+                const prediction = await model.predict(img);
+
+                // Log predictions for debugging
+                console.log("Full Predictions:", prediction);
+
+                // Display predictions in a table
+                labelContainer.innerHTML = ""; // Clear previous text
+
+                // Create the table
+                const table = document.createElement("table");
+                table.id = "prediction-table";
+
+                // Create table header
+                const thead = document.createElement("thead");
+                const headerRow = document.createElement("tr");
+
+                const classHeader = document.createElement("th");
+                classHeader.textContent = "Class Name";
+
+                const probHeader = document.createElement("th");
+                probHeader.textContent = "Probability";
+
+                headerRow.appendChild(classHeader);
+                headerRow.appendChild(probHeader);
+                thead.appendChild(headerRow);
+                table.appendChild(thead);
+
+                // Create table body
+                const tbody = document.createElement("tbody");
+
+                prediction.forEach(pred => {
+                    const row = document.createElement("tr");
+
+                    const classCell = document.createElement("td");
+                    classCell.textContent = pred.className;
+
+                    const probCell = document.createElement("td");
+                    probCell.textContent = (pred.probability * 100).toFixed(2) + "%";
+
+                    row.appendChild(classCell);
+                    row.appendChild(probCell);
+                    tbody.appendChild(row);
+                });
+
+                table.appendChild(tbody);
+                labelContainer.appendChild(table);
+            };
+        }
+
+        // Start the initialization
+        window.addEventListener("DOMContentLoaded", init);
+    </script>
+</body>
+</html>
